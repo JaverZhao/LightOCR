@@ -142,7 +142,7 @@
                                    Foreground="{StaticResource TextSecondaryBrush}" />
                     </Grid>
                     <Grid Grid.Row="1" Margin="12,0,12,8">
-                        <TextBox Text="{Binding OcrResultText, Mode=OneWay}"
+                        <TextBox Text="{Binding OcrResultText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  AcceptsReturn="True" TextWrapping="Wrap"
                                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                                  Padding="7,5" FontSize="15"

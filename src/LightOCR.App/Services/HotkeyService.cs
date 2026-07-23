@@ -12,11 +12,20 @@ public sealed class HotkeyService : IDisposable
     private HwndSource? _source;
     private nint _hwnd;
     private bool _registered;
+    private uint _registeredModifiers;
+    private uint _registeredKey;
 
     public event Action? HotkeyPressed;
 
     public void Initialize(Window window)
     {
+        Unregister();
+        if (_source != null)
+        {
+            _source.RemoveHook(WndProc);
+            _source = null;
+        }
+
         _source = PresentationSource.FromVisual(window) as HwndSource;
         if (_source == null)
             throw new InvalidOperationException("Cannot get HWND source");
@@ -27,19 +36,22 @@ public sealed class HotkeyService : IDisposable
 
     public bool Register(string modifiers, string key)
     {
+        var hadPrevious = _registered;
+        var previousModifiers = _registeredModifiers;
+        var previousKey = _registeredKey;
         Unregister();
 
         uint mod = 0;
         foreach (var m in modifiers.Split('+', StringSplitOptions.TrimEntries))
         {
-            mod |= m.ToLower() switch
+            mod |= (uint)(m.ToLower() switch
             {
                 "alt" => User32.MOD_ALT,
                 "ctrl" or "control" => User32.MOD_CONTROL,
                 "shift" => User32.MOD_SHIFT,
                 "win" => User32.MOD_WIN,
                 _ => 0
-            };
+            });
         }
 
         uint vk = (uint)System.Windows.Input.KeyInterop.VirtualKeyFromKey(
@@ -49,10 +61,20 @@ public sealed class HotkeyService : IDisposable
         {
             int err = Marshal.GetLastWin32Error();
             Log.Error("RegisterHotKey failed, error={Err}, mod={Mod}, key={Key}", err, mod, key);
+            if (hadPrevious &&
+                User32.RegisterHotKey(_hwnd, HotkeyId, previousModifiers, previousKey))
+            {
+                _registered = true;
+                _registeredModifiers = previousModifiers;
+                _registeredKey = previousKey;
+                Log.Warning("Restored previous hotkey after registration failure");
+            }
             return false;
         }
 
         _registered = true;
+        _registeredModifiers = mod | User32.MOD_NOREPEAT;
+        _registeredKey = vk;
         Log.Information("Hotkey registered: {Mod}+{Key}", modifiers, key);
         return true;
     }

@@ -4,10 +4,10 @@
 #include <cstring>
 #include <windows.h>
 
-int TextDetector::Initialize(const std::string& model_path, std::string* out_error) {
+int TextDetector::Initialize(const std::string& model_path, int cpu_threads, std::string* out_error) {
     try {
         Ort::SessionOptions opts;
-        opts.SetIntraOpNumThreads(4);
+        opts.SetIntraOpNumThreads(std::clamp(cpu_threads, 1, 64));
         opts.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
         // Convert UTF-8 path to wide string for Windows (ORTCHAR_T = wchar_t)
         int wlen = MultiByteToWideChar(CP_UTF8, 0, model_path.c_str(), -1, nullptr, 0);

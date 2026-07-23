@@ -77,7 +77,7 @@ public partial class CaptureOverlayWindow : Window
         SizeText.Text = $"{w:F0} × {h:F0}";
     }
 
-    private void OnMouseUp(object sender, MouseButtonEventArgs e)
+    private async void OnMouseUp(object sender, MouseButtonEventArgs e)
     {
         if (!_isDragging) return;
         _isDragging = false;
@@ -91,8 +91,8 @@ public partial class CaptureOverlayWindow : Window
 
         _session.UpdateSelection(physRect);
 
-        var region = _session.CompleteSelection();
-        if (region != null) Close();
+        var region = await _session.CompleteSelectionAsync();
+        if (region != null && IsVisible) Close();
     }
 
     private void OnKeyDown(object sender, WpfKeyEventArgs e)

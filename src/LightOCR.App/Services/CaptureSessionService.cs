@@ -18,14 +18,20 @@ public enum CaptureState
 
 public sealed class CaptureSessionService
 {
+    private readonly Func<NormalizedImage?> _captureScreen;
     private CaptureState _state = CaptureState.Idle;
+
+    public CaptureSessionService(Func<NormalizedImage?>? captureScreen = null)
+    {
+        _captureScreen = captureScreen ?? CaptureService.CaptureScreen;
+    }
 
     public CaptureState State => _state;
     public NormalizedImage? FullScreenImage { get; private set; }
     public Rectangle SelectionRect { get; private set; }
 
     public event Action<CaptureState, CaptureState>? StateChanged;
-    public event Action<NormalizedImage>? CaptureCompleted;
+    public event Func<NormalizedImage, Task>? CaptureCompleted;
     public event Action? CaptureCancelled;
 
     public bool BeginCapture()
@@ -33,10 +39,11 @@ public sealed class CaptureSessionService
         if (!TryTransition(CaptureState.Idle, CaptureState.Preparing))
             return false;
 
-        var captured = CaptureService.CaptureScreen();
+        var captured = _captureScreen();
         if (captured == null)
         {
             TransitionTo(CaptureState.Failed);
+            Reset();
             return false;
         }
 
@@ -68,7 +75,7 @@ public sealed class CaptureSessionService
         Reset();
     }
 
-    public NormalizedImage? CompleteSelection()
+    public async Task<NormalizedImage?> CompleteSelectionAsync()
     {
         if (_state != CaptureState.Selected) return null;
 
@@ -89,12 +96,27 @@ public sealed class CaptureSessionService
             return null;
         }
 
-        TransitionTo(CaptureState.Completed);
-        CaptureCompleted?.Invoke(region);
+        try
+        {
+            var handlers = CaptureCompleted?.GetInvocationList()
+                .Cast<Func<NormalizedImage, Task>>()
+                .ToArray() ?? [];
+            foreach (var handler in handlers)
+                await handler(region);
 
-        var result = region;
-        Reset();
-        return result;
+            TransitionTo(CaptureState.Completed);
+            return region;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Capture completion handler failed");
+            TransitionTo(CaptureState.Failed);
+            return null;
+        }
+        finally
+        {
+            Reset();
+        }
     }
 
     public void Reset()

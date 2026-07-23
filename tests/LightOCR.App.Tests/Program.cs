@@ -12,12 +12,78 @@ internal static class Program
     private static int Main(string[] args)
     {
         VerifyRegionCrop();
+        VerifyCaptureRemainsBusyUntilRecognitionCompletes();
+        VerifyCoordinatorReload();
 
         if (args.Contains("--render-ui"))
             RenderMainWindow();
 
         Console.WriteLine("LightOCR.App regression checks passed.");
         return 0;
+    }
+
+    private static void VerifyCaptureRemainsBusyUntilRecognitionCompletes()
+    {
+        const int width = 20;
+        const int height = 20;
+        var pixels = Enumerable.Repeat((byte)255, width * height * 4).ToArray();
+        var source = new NormalizedImage(width, height, width * 4, pixels, "capture-state-test");
+        var session = new CaptureSessionService(() => source);
+        var handlerStarted = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var allowCompletion = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        session.CaptureCompleted += async _ =>
+        {
+            handlerStarted.TrySetResult();
+            await allowCompletion.Task;
+        };
+
+        Assert(session.BeginCapture(), "Capture should begin");
+        session.UpdateSelection(new Rectangle(0, 0, 10, 10));
+        var completion = session.CompleteSelectionAsync();
+        handlerStarted.Task.GetAwaiter().GetResult();
+
+        Assert(session.State == CaptureState.Recognizing,
+            "Capture should remain in Recognizing while OCR handler is running");
+        Assert(!session.BeginCapture(), "A second capture must be rejected while recognizing");
+
+        allowCompletion.TrySetResult();
+        Assert(completion.GetAwaiter().GetResult() != null, "Capture should complete");
+        Assert(session.State == CaptureState.Idle, "Capture should return to Idle after recognition");
+
+        var failedSession = new CaptureSessionService(() => null);
+        Assert(!failedSession.BeginCapture(), "Failed screen capture should be reported");
+        Assert(failedSession.State == CaptureState.Idle,
+            "Failed screen capture must reset so the user can retry");
+    }
+
+    private static void VerifyCoordinatorReload()
+    {
+        var modelDir = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory, "..", "..", "..", "..", "..", "models", "onnx"));
+        Assert(Directory.Exists(modelDir), "OCR model directory should exist");
+
+        using var coordinator = new OcrCoordinator();
+        var config = new OcrConfig
+        {
+            CpuThreads = 1,
+            ConfidenceThreshold = 0.55f
+        };
+
+        coordinator.InitializeAsync(modelDir, config).GetAwaiter().GetResult();
+        coordinator.InitializeAsync(modelDir, config).GetAwaiter().GetResult();
+
+        const int width = 64;
+        const int height = 32;
+        var pixels = Enumerable.Repeat((byte)255, width * height * 4).ToArray();
+        var image = new NormalizedImage(width, height, width * 4, pixels, "reload-test");
+        var result = coordinator.RecognizeAsync(image).GetAwaiter().GetResult();
+
+        Assert(result != null, "OCR should still work after model reload");
+        Assert(result!.ImageWidth == width && result.ImageHeight == height,
+            "OCR result dimensions are invalid after reload");
     }
 
     private static void VerifyRegionCrop()

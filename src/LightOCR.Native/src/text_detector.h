@@ -10,7 +10,7 @@ struct TextDetector {
     TextDetector() = default;
     ~TextDetector() = default;
 
-    int Initialize(const std::string& model_path, std::string* out_error);
+    int Initialize(const std::string& model_path, int cpu_threads, std::string* out_error);
     int Detect(const std::uint8_t* bgr_pixels, int width, int height,
                std::vector<std::vector<std::pair<int, int>>>* out_boxes,
                std::string* out_error);

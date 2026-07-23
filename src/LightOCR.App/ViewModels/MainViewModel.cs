@@ -13,7 +13,9 @@ public partial class MainViewModel : ObservableObject
     private readonly ImageInputService _imageInput;
     private readonly OcrCoordinator _ocrCoordinator;
     private readonly ClipboardService _clipboard;
+    private readonly SettingsService _settingsService;
     private readonly Func<Task>? _screenshotAction;
+    private readonly Action? _settingsAction;
 
     [ObservableProperty]
     private bool _isBusy;
@@ -40,12 +42,16 @@ public partial class MainViewModel : ObservableObject
         ImageInputService imageInput,
         OcrCoordinator ocrCoordinator,
         ClipboardService clipboard,
-        Func<Task>? screenshotAction = null)
+        Func<Task>? screenshotAction = null,
+        SettingsService? settingsService = null,
+        Action? settingsAction = null)
     {
         _imageInput = imageInput;
         _ocrCoordinator = ocrCoordinator;
         _clipboard = clipboard;
         _screenshotAction = screenshotAction;
+        _settingsService = settingsService ?? new SettingsService();
+        _settingsAction = settingsAction;
     }
 
     [RelayCommand]
@@ -100,12 +106,15 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void OpenSettings()
     {
+        if (_settingsAction != null)
+        {
+            _settingsAction();
+            return;
+        }
+
         foreach (System.Windows.Window w in System.Windows.Application.Current.Windows)
             if (w is Views.SettingsWindow) { w.Activate(); return; }
-        var settingsService = new SettingsService();
-        var hotkey = new HotkeyService();
-        var sw = new Views.SettingsWindow(settingsService, hotkey);
-        sw.Show();
+        StatusText = "设置服务不可用";
     }
 
     [ObservableProperty]
@@ -123,8 +132,9 @@ public partial class MainViewModel : ObservableObject
         var modelDir = Path.Combine(AppContext.BaseDirectory, "models", "onnx");
         if (!Directory.Exists(modelDir))
             modelDir = Path.GetFullPath(Path.Combine(
-                AppContext.BaseDirectory, @"..\..\..\..\..\models\onnx"));
-        await _ocrCoordinator.InitializeAsync(modelDir);
+                AppContext.BaseDirectory, @"..\..\..\..\..\..\models\onnx"));
+        var settings = _settingsService.Load<Settings>();
+        await _ocrCoordinator.InitializeAsync(modelDir, settings.Ocr);
         ModelState = "模型已就绪";
         StatusText = "模型已重新加载";
     }
@@ -172,11 +182,23 @@ public partial class MainViewModel : ObservableObject
                 HasResult = true;
                 StatusText = $"识别完成 — {result.Lines.Count} 行, {result.FullText.Length} 字符";
 
-                if (result.FullText.Length > 0)
+                var settings = _settingsService.Load<Settings>();
+                if (settings.Ocr.AutoCopy && result.FullText.Length > 0)
                 {
                     var copied = await _clipboard.CopyTextAsync(result.FullText);
                     if (copied)
                         StatusText += "，已复制";
+                }
+
+                if (settings.Ocr.ShowResultWindow)
+                {
+                    var resultWindow = new Views.ResultWindow(_clipboard);
+                    resultWindow.ViewModel.Result = result;
+                    resultWindow.ViewModel.EditableText = result.FullText;
+                    resultWindow.ViewModel.ElapsedText =
+                        $"识别耗时：{result.Elapsed.TotalMilliseconds:F0} ms";
+                    resultWindow.ViewModel.ImagePreview = image.Preview;
+                    resultWindow.Show();
                 }
             }
             else

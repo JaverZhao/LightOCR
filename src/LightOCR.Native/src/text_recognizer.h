@@ -10,7 +10,7 @@ struct TextRecognizer {
     TextRecognizer() = default;
     ~TextRecognizer() = default;
 
-    int Initialize(const std::string& model_path, const std::string& dict_path,
+    int Initialize(const std::string& model_path, const std::string& dict_path, int cpu_threads,
                    std::string* out_error);
     int Recognize(const std::uint8_t* bgr_pixels, int width, int height,
                   std::vector<std::string>* out_texts,

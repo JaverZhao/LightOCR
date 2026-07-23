@@ -39,7 +39,7 @@ public class ImageInputService
         }
     }
 
-    public async Task<NormalizedImage?> FromClipboardAsync()
+    public Task<NormalizedImage?> FromClipboardAsync()
     {
         try
         {
@@ -51,15 +51,15 @@ public class ImageInputService
                     using var ms = new MemoryStream();
                     bitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
                     var data = ms.ToArray();
-                    return DecodeImage(data, "剪贴板");
+                    return Task.FromResult(DecodeImage(data, "剪贴板"));
                 }
             }
-            return null;
+            return Task.FromResult<NormalizedImage?>(null);
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Failed to paste image");
-            return null;
+            return Task.FromResult<NormalizedImage?>(null);
         }
     }
 

@@ -11,10 +11,13 @@ public partial class MainWindow : Window
         ImageInputService imageInput,
         OcrCoordinator ocrCoordinator,
         ClipboardService clipboard,
-        Func<Task> screenshotAction)
+        Func<Task> screenshotAction,
+        SettingsService? settingsService = null,
+        Action? settingsAction = null)
     {
         InitializeComponent();
-        DataContext = new MainViewModel(imageInput, ocrCoordinator, clipboard, screenshotAction);
+        DataContext = new MainViewModel(
+            imageInput, ocrCoordinator, clipboard, screenshotAction, settingsService, settingsAction);
     }
 
     private void OnDragOver(object sender, System.Windows.DragEventArgs e)

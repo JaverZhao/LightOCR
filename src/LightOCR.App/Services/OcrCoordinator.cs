@@ -11,51 +11,85 @@ namespace LightOCR.App.Services;
 
 public sealed class OcrCoordinator : IDisposable
 {
-    private readonly OcrEngine _engine;
     private readonly Channel<OcrRequest> _channel;
     private readonly CancellationTokenSource _cts = new();
-    private bool _initialized;
+    private readonly SemaphoreSlim _engineGate = new(1, 1);
+    private readonly SemaphoreSlim _initializeGate = new(1, 1);
+    private readonly Task _worker;
+    private OcrEngine? _engine;
+    private volatile bool _initialized;
+    private bool _disposed;
 
     public OcrCoordinator()
     {
-        _engine = new OcrEngine();
         _channel = Channel.CreateBounded<OcrRequest>(new BoundedChannelOptions(1)
         {
             SingleWriter = false,
-            SingleReader = true
+            SingleReader = true,
+            FullMode = BoundedChannelFullMode.Wait
         });
+        _worker = Task.Run(() => ProcessQueueAsync(_cts.Token));
     }
 
-    public async Task InitializeAsync(string modelDir)
+    public async Task InitializeAsync(string modelDir, OcrConfig? settings = null)
     {
-        // Detect model file naming: subdirectory or flat
-        string detOnnx, recOnnx;
-        if (File.Exists(Path.Combine(modelDir, "det", "inference.onnx")))
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        await _initializeGate.WaitAsync(_cts.Token).ConfigureAwait(false);
+        try
         {
-            detOnnx = "det/inference.onnx";
-            recOnnx = "rec/inference.onnx";
+
+            // Detect model file naming: subdirectory or flat
+            string detOnnx, recOnnx;
+            if (File.Exists(Path.Combine(modelDir, "det", "inference.onnx")))
+            {
+                detOnnx = "det/inference.onnx";
+                recOnnx = "rec/inference.onnx";
+            }
+            else
+            {
+                detOnnx = "det_inference.onnx";
+                recOnnx = "rec_inference.onnx";
+            }
+
+            var config = new
+            {
+                modelDir,
+                detModelOnnx = detOnnx,
+                recModelOnnx = recOnnx,
+                dictPath = "ppocrv6_dict.txt",
+                cpuThreads = Math.Clamp(settings?.CpuThreads ?? 4, 1, 16),
+                confidenceThreshold = Math.Clamp(
+                    settings?.ConfidenceThreshold ?? 0.55f, 0.0f, 1.0f)
+            };
+
+            var json = JsonSerializer.Serialize(config);
+            var replacement = new OcrEngine();
+            try
+            {
+                await Task.Run(() => replacement.Create(json), _cts.Token).ConfigureAwait(false);
+                await _engineGate.WaitAsync(_cts.Token).ConfigureAwait(false);
+                try
+                {
+                    var previous = _engine;
+                    _engine = replacement;
+                    replacement = null!;
+                    _initialized = true;
+                    previous?.Dispose();
+                }
+                finally
+                {
+                    _engineGate.Release();
+                }
+            }
+            finally
+            {
+                replacement?.Dispose();
+            }
         }
-        else
+        finally
         {
-            detOnnx = "det_inference.onnx";
-            recOnnx = "rec_inference.onnx";
+            _initializeGate.Release();
         }
-
-        var config = new
-        {
-            modelDir,
-            detModelOnnx = detOnnx,
-            recModelOnnx = recOnnx,
-            dictPath = "ppocrv6_dict.txt",
-            cpuThreads = 4,
-            confidenceThreshold = 0.55
-        };
-
-        var json = JsonSerializer.Serialize(config);
-        _engine.Create(json);
-        _initialized = true;
-
-        _ = ProcessQueueAsync(_cts.Token);
     }
 
     public async Task<OcrDocumentResult?> RecognizeAsync(NormalizedImage image)
@@ -66,35 +100,66 @@ public sealed class OcrCoordinator : IDisposable
             return null;
         }
 
-        var tcs = new TaskCompletionSource<OcrDocumentResult?>();
-        await _channel.Writer.WriteAsync(new OcrRequest(image, tcs));
-        return await tcs.Task;
+        var tcs = new TaskCompletionSource<OcrDocumentResult?>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        try
+        {
+            await _channel.Writer.WriteAsync(new OcrRequest(image, tcs), _cts.Token);
+            return await tcs.Task;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (ChannelClosedException)
+        {
+            return null;
+        }
     }
 
     private async Task ProcessQueueAsync(CancellationToken ct)
     {
-        await foreach (var request in _channel.Reader.ReadAllAsync(ct))
+        try
         {
-            try
+            await foreach (var request in _channel.Reader.ReadAllAsync(ct).ConfigureAwait(false))
             {
-                var sw = Stopwatch.StartNew();
-                var result = RunOcr(request.Image);
-                sw.Stop();
-
-                if (result != null)
+                try
                 {
-                    request.Completion.TrySetResult(result with { Elapsed = sw.Elapsed });
+                    var sw = Stopwatch.StartNew();
+                    await _engineGate.WaitAsync(ct).ConfigureAwait(false);
+                    OcrDocumentResult? result;
+                    try
+                    {
+                        result = RunOcr(request.Image);
+                    }
+                    finally
+                    {
+                        _engineGate.Release();
+                    }
+                    sw.Stop();
+
+                    request.Completion.TrySetResult(
+                        result is null ? null : result with { Elapsed = sw.Elapsed });
                 }
-                else
+                catch (OperationCanceledException)
                 {
                     request.Completion.TrySetResult(null);
                 }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "OCR processing failed");
+                    request.Completion.TrySetResult(null);
+                }
             }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "OCR processing failed");
-                request.Completion.TrySetResult(null);
-            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Normal shutdown.
+        }
+        finally
+        {
+            while (_channel.Reader.TryRead(out var pending))
+                pending.Completion.TrySetResult(null);
         }
     }
 
@@ -108,7 +173,7 @@ public sealed class OcrCoordinator : IDisposable
             try
             {
                 int rc = NativeOcrMethods.lightocr_recognize_bgra(
-                    _engine.Handle,
+                    _engine?.Handle ?? IntPtr.Zero,
                     (IntPtr)ptr,
                     image.Width,
                     image.Height,
@@ -173,9 +238,20 @@ public sealed class OcrCoordinator : IDisposable
 
     public void Dispose()
     {
+        if (_disposed) return;
+        _disposed = true;
+        _initialized = false;
+        _channel.Writer.TryComplete();
         _cts.Cancel();
+        _initializeGate.Wait();
+        try { _worker.GetAwaiter().GetResult(); }
+        catch (OperationCanceledException) { }
+        _engine?.Dispose();
+        _engine = null;
+        _engineGate.Dispose();
+        _initializeGate.Release();
+        _initializeGate.Dispose();
         _cts.Dispose();
-        _engine.Dispose();
     }
 
     private sealed record OcrRequest(

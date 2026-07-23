@@ -12,4 +12,14 @@
     <ProjectReference Include="..\..\src\LightOCR.App\LightOCR.App.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\..\src\LightOCR.Native\build\$(Configuration)\LightOCR.Native.dll"
+          Link="LightOCR.Native.dll"
+          CopyToOutputDirectory="PreserveNewest"
+          Condition="Exists('..\..\src\LightOCR.Native\build\$(Configuration)\LightOCR.Native.dll')" />
+    <None Include="..\..\runtime\onnxruntime\onnxruntime-win-x64-1.21.0\lib\onnxruntime.dll"
+          Link="onnxruntime.dll"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

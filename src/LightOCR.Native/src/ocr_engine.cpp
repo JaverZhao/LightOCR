@@ -7,6 +7,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstring>
+#include <stdexcept>
 
 OcrEngine::OcrEngine() = default;
 OcrEngine::~OcrEngine() = default;
@@ -18,13 +19,14 @@ int OcrEngine::Initialize(const std::string& config_json) {
     auto base_dir = config_.model_dir;
     auto det_model_path = base_dir + "/" + config_.det_model_onnx;
     detector_ = std::make_unique<TextDetector>();
-    rc = detector_->Initialize(det_model_path, &last_error_);
+    rc = detector_->Initialize(det_model_path, config_.cpu_threads, &last_error_);
     if (rc != 0) return rc;
 
     auto rec_model_path = base_dir + "/" + config_.rec_model_onnx;
     auto dict_path = base_dir + "/" + config_.dict_path;
     recognizer_ = std::make_unique<TextRecognizer>();
-    rc = recognizer_->Initialize(rec_model_path, dict_path, &last_error_);
+    rc = recognizer_->Initialize(
+        rec_model_path, dict_path, config_.cpu_threads, &last_error_);
     if (rc != 0) return rc;
 
     initialized_ = true;
@@ -52,7 +54,9 @@ std::string OcrEngine::RunPipeline(const uint8_t* bgr, int w, int h) {
     auto t_start = std::chrono::high_resolution_clock::now();
 
     std::vector<std::vector<std::pair<int, int>>> boxes;
-    detector_->Detect(bgr, w, h, &boxes, &last_error_);
+    int rc = detector_->Detect(bgr, w, h, &boxes, &last_error_);
+    if (rc != 0)
+        throw std::runtime_error("Detection failed: " + last_error_);
     auto t_det = std::chrono::high_resolution_clock::now();
 
     BoxSorter::SortByReadingOrder(&boxes);
@@ -93,7 +97,10 @@ std::string OcrEngine::RunPipeline(const uint8_t* bgr, int w, int h) {
 
         std::vector<std::string> texts;
         std::vector<float> confidences;
-        recognizer_->Recognize(cropped.data(), crop_w, crop_h, &texts, &confidences, &last_error_);
+        rc = recognizer_->Recognize(
+            cropped.data(), crop_w, crop_h, &texts, &confidences, &last_error_);
+        if (rc != 0)
+            throw std::runtime_error("Recognition failed: " + last_error_);
 
         if (!texts.empty() && !texts[0].empty()) {
             float conf = confidences.empty() ? 0.0f : confidences[0];

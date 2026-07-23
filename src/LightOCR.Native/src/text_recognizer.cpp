@@ -6,6 +6,7 @@
 #include <windows.h>
 
 int TextRecognizer::Initialize(const std::string& model_path, const std::string& dict_path,
+                                int cpu_threads,
                                 std::string* out_error) {
     std::ifstream dict_file(dict_path, std::ios::binary);
     if (!dict_file.is_open()) {
@@ -36,7 +37,7 @@ int TextRecognizer::Initialize(const std::string& model_path, const std::string&
 
     try {
         Ort::SessionOptions opts;
-        opts.SetIntraOpNumThreads(4);
+        opts.SetIntraOpNumThreads(std::clamp(cpu_threads, 1, 64));
         opts.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
         int wlen = MultiByteToWideChar(CP_UTF8, 0, model_path.c_str(), -1, nullptr, 0);
         std::wstring wpath(wlen, L'\0');
@@ -146,7 +147,9 @@ int TextRecognizer::Recognize(const uint8_t* bgr_pixels, int width, int height,
 
         std::string text = CTCDecode(output_data, seq_len, num_classes);
 
-        float max_conf = 0.0f;
+        float confidence_sum = 0.0f;
+        int confidence_count = 0;
+        int previous_char_id = -1;
         for (int t = 0; t < seq_len; ++t) {
             int max_idx = 0;
             float max_val = -1e10f;
@@ -154,14 +157,19 @@ int TextRecognizer::Recognize(const uint8_t* bgr_pixels, int width, int height,
                 float val = output_data[t * num_classes + c];
                 if (val > max_val) { max_val = val; max_idx = c; }
             }
-            if (max_idx > 0 && max_idx <= static_cast<int>(char_dict_.size())) {
+            if (max_idx > 0 &&
+                max_idx <= static_cast<int>(char_dict_.size()) &&
+                max_idx != previous_char_id) {
                 // The exported graph already applies softmax.
-                max_conf = std::max(max_conf, std::clamp(max_val, 0.0f, 1.0f));
+                confidence_sum += std::clamp(max_val, 0.0f, 1.0f);
+                ++confidence_count;
             }
+            previous_char_id = (max_idx == 0) ? -1 : max_idx;
         }
 
         out_texts->push_back(text);
-        out_confidences->push_back(max_conf);
+        out_confidences->push_back(
+            confidence_count == 0 ? 0.0f : confidence_sum / confidence_count);
         return 0;
     } catch (const Ort::Exception& e) {
         if (out_error) *out_error = std::string("ONNX inference failed: ") + e.what();

@@ -10,7 +10,7 @@
     {
       "order": 0,
       "text": "一个意大利美女坐在清吧的酒吧果，她面容精致 深色长发微卷 眼神沉静而若有所思，她穿着一件翦裁合",
-      "confidence": 0.999999,
+      "confidence": 0.949702,
       "polygon": [
         [0, 19],
         [981, 19],
@@ -21,7 +21,7 @@
     {
       "order": 1,
       "text": "体的上衣，资态放松地坐在吧台前的享脚凳上一只手轻轻搭在台面上吧台表面有隐约的本质纹理，背景",
-      "confidence": 0.999945,
+      "confidence": 0.893714,
       "polygon": [
         [0, 50],
         [981, 50],
@@ -32,7 +32,7 @@
     {
       "order": 2,
       "text": "星板上排列文的酒瓶和黄调的字中火，火线柔和地尔斯川她的佩胞轮度，清吧中环培灾静，东品",
-      "confidence": 0.997253,
+      "confidence": 0.600768,
       "polygon": [
         [0, 80],
         [981, 80],
@@ -43,7 +43,7 @@
     {
       "order": 3,
       "text": "--",
-      "confidence": 0.375521,
+      "confidence": 0.371927,
       "polygon": [
         [0, 110],
         [981, 110],
@@ -54,7 +54,7 @@
     {
       "order": 4,
       "text": "张工直时于区来种*口间，正体务",
-      "confidence": 0.995187,
+      "confidence": 0.529134,
       "polygon": [
         [0, 141],
         [307, 141],
@@ -65,8 +65,8 @@
   ],
   "timing": {
     "preprocessMs": 0,
-    "detectionMs": 105,
-    "recognitionMs": 326,
+    "detectionMs": 104,
+    "recognitionMs": 408,
     "postprocessMs": 0
   }
 }

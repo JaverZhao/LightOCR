@@ -10,10 +10,13 @@ public partial class SettingsWindow : Window
 {
     private readonly SettingsViewModel _vm;
 
-    public SettingsWindow(SettingsService settingsService, HotkeyService hotkey)
+    public SettingsWindow(
+        SettingsService settingsService,
+        HotkeyService hotkey,
+        Func<LightOCR.App.Models.Settings, Task>? settingsApplied = null)
     {
         InitializeComponent();
-        _vm = new SettingsViewModel(settingsService, hotkey);
+        _vm = new SettingsViewModel(settingsService, hotkey, settingsApplied);
         DataContext = _vm;
     }
 

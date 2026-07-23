@@ -9,6 +9,7 @@ namespace LightOCR.App.ViewModels;
 public partial class ResultViewModel : ObservableObject
 {
     private readonly ClipboardService _clipboard;
+    public Action? CloseAction { get; set; }
 
     [ObservableProperty]
     private OcrDocumentResult? _result;
@@ -37,6 +38,6 @@ public partial class ResultViewModel : ObservableObject
     [RelayCommand]
     private void Close()
     {
-        // Close via window
+        CloseAction?.Invoke();
     }
 }

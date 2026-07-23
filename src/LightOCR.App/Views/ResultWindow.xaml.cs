@@ -10,6 +10,7 @@ public partial class ResultWindow : Window
     {
         InitializeComponent();
         DataContext = new ResultViewModel(clipboard);
+        ViewModel.CloseAction = Close;
     }
 
     public ResultViewModel ViewModel => (ResultViewModel)DataContext;

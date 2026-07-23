@@ -11,6 +11,7 @@ public partial class SettingsViewModel : ObservableObject
 {
     private readonly SettingsService _settingsService;
     private readonly HotkeyService _hotkey;
+    private readonly Func<Settings, Task>? _settingsApplied;
     private Settings _original = Settings.Default;
 
     [ObservableProperty]
@@ -40,10 +41,14 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private string _hotkeyStatus = "";
 
-    public SettingsViewModel(SettingsService settingsService, HotkeyService hotkey)
+    public SettingsViewModel(
+        SettingsService settingsService,
+        HotkeyService hotkey,
+        Func<Settings, Task>? settingsApplied = null)
     {
         _settingsService = settingsService;
         _hotkey = hotkey;
+        _settingsApplied = settingsApplied;
 
         LoadFromSettings(_settingsService.Load<Settings>());
     }
@@ -75,24 +80,25 @@ public partial class SettingsViewModel : ObservableObject
         var tempService = new HotkeyService();
         var win = new Window { Width = 0, Height = 0, WindowStyle = WindowStyle.None,
             ShowInTaskbar = false };
-        win.Show();
-        win.Hide();
-        tempService.Initialize(win);
+        try
+        {
+            win.Show();
+            win.Hide();
+            tempService.Initialize(win);
 
-        if (tempService.Register(string.Join("+", modifiers), key))
-        {
-            tempService.Dispose();
-            HotkeyStatus = "快捷键可用";
+            HotkeyStatus = tempService.Register(string.Join("+", modifiers), key)
+                ? "快捷键可用"
+                : "快捷键冲突，请选择其他组合";
         }
-        else
+        finally
         {
             tempService.Dispose();
-            HotkeyStatus = "快捷键冲突，请选择其他组合";
+            win.Close();
         }
     }
 
     [RelayCommand]
-    private void Apply()
+    private async Task Apply()
     {
         var s = new Settings
         {
@@ -119,16 +125,15 @@ public partial class SettingsViewModel : ObservableObject
             }
         };
 
-        _settingsService.Save(s);
-
         // Apply hotkey changes
         var mods = string.Join("+", s.Hotkey.Modifiers);
-        var win = new Window { Width = 0, Height = 0, WindowStyle = WindowStyle.None,
-            ShowInTaskbar = false };
-        win.Show();
-        win.Hide();
-        _hotkey.Initialize(win);
-        _hotkey.Register(mods, s.Hotkey.Key);
+        if (!_hotkey.Register(mods, s.Hotkey.Key))
+        {
+            HotkeyStatus = "快捷键注册失败，设置未保存";
+            return;
+        }
+
+        _settingsService.Save(s);
 
         // Apply startup
         if (s.Application.StartWithWindows)
@@ -136,6 +141,21 @@ public partial class SettingsViewModel : ObservableObject
         else
             StartupService.Disable();
 
+        if (_settingsApplied != null)
+        {
+            try
+            {
+                await _settingsApplied(s);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Settings saved, but OCR reload failed");
+                HotkeyStatus = "已保存，但 OCR 模型重载失败";
+                return;
+            }
+        }
+
+        _original = s;
         HotkeyStatus = "已保存";
         Log.Information("Settings saved and applied");
     }

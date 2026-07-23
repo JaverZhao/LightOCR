@@ -21,6 +21,7 @@ public sealed class AppLifetimeService : IDisposable
     private readonly CaptureSessionService _captureSession = new();
     private Settings _settings = Settings.Default;
     private ToastWindow? _currentToast;
+    private bool _disposed;
 
     public AppLifetimeService()
     {
@@ -36,7 +37,7 @@ public sealed class AppLifetimeService : IDisposable
     public CaptureSessionService CaptureSession => _captureSession;
     public Settings Settings => _settings;
 
-    public async Task StartAsync(string[] args)
+    public Task StartAsync(string[] args)
     {
         var sw = Stopwatch.StartNew();
         InitializeLogging();
@@ -46,6 +47,7 @@ public sealed class AppLifetimeService : IDisposable
         {
             _guard.TryActivateFirstInstance(args);
             Environment.Exit(0);
+            return Task.CompletedTask;
         }
         Log.Debug("Single instance OK");
 
@@ -71,6 +73,7 @@ public sealed class AppLifetimeService : IDisposable
 
         sw.Stop();
         Log.Information("Startup in {Ms}ms", sw.ElapsedMilliseconds);
+        return Task.CompletedTask;
     }
 
     private void RegisterGlobalHotkey()
@@ -93,7 +96,7 @@ public sealed class AppLifetimeService : IDisposable
             var modelDir = ResolveModelDir();
             if (modelDir != null)
             {
-                await _ocr.InitializeAsync(modelDir);
+                await _ocr.InitializeAsync(modelDir, _settings.Ocr);
                 Log.Information("OCR engine ready from {Dir}", modelDir);
 
                 // Notify main window
@@ -134,8 +137,7 @@ public sealed class AppLifetimeService : IDisposable
 
     private async Task BeginScreenshot()
     {
-        if (_captureSession.State == CaptureState.Selecting ||
-            _captureSession.State == CaptureState.Recognizing)
+        if (_captureSession.State != CaptureState.Idle)
         {
             ShowToast("已有截图任务进行中");
             return;
@@ -162,7 +164,7 @@ public sealed class AppLifetimeService : IDisposable
         }
     }
 
-    private async void OnCaptureCompleted(NormalizedImage image)
+    private async Task OnCaptureCompleted(NormalizedImage image)
     {
         CloseCaptureOverlays();
         OnShowWindow();
@@ -214,9 +216,8 @@ public sealed class AppLifetimeService : IDisposable
         var image = await _imageInput.FromFileAsync(path);
         if (image == null) return;
         OnShowWindow();
-        var result = await _ocr.RecognizeAsync(image);
-        if (result != null)
-            ShowToast($"识别完成: {result.Lines.Count} 行");
+        if (_mainWindow?.DataContext is ViewModels.MainViewModel vm)
+            await vm.RecognizeCapturedImageAsync(image);
     }
 
     private Views.MainWindow? _mainWindow;
@@ -233,7 +234,8 @@ public sealed class AppLifetimeService : IDisposable
         Log.Debug("Creating main window");
         try
         {
-            _mainWindow = new Views.MainWindow(_imageInput, _ocr, _clipboard, BeginScreenshot);
+            _mainWindow = new Views.MainWindow(
+                _imageInput, _ocr, _clipboard, BeginScreenshot, _settingsService, OnShowSettings);
             _mainWindow.Closed += (_, _) => _mainWindow = null;
             _mainWindow.Show();
         }
@@ -248,8 +250,20 @@ public sealed class AppLifetimeService : IDisposable
         foreach (Window w in App.Current.Windows)
             if (w is SettingsWindow) { w.Activate(); return; }
 
-        var sw = new SettingsWindow(_settingsService, _hotkey);
+        var sw = new SettingsWindow(_settingsService, _hotkey, OnSettingsAppliedAsync);
         sw.Show();
+    }
+
+    private async Task OnSettingsAppliedAsync(Settings settings)
+    {
+        _settings = settings;
+        var modelDir = ResolveModelDir();
+        if (modelDir != null)
+        {
+            await _ocr.InitializeAsync(modelDir, settings.Ocr);
+            if (_mainWindow?.DataContext is ViewModels.MainViewModel vm)
+                vm.OnOcrReady();
+        }
     }
 
     private void OnExit()
@@ -257,12 +271,10 @@ public sealed class AppLifetimeService : IDisposable
         App.Current.Shutdown();
     }
 
-    public async Task StopAsync()
+    public Task StopAsync()
     {
-        _hotkey.Dispose();
-        _ocr.Dispose();
-        _tray.Dispose();
-        await Task.CompletedTask;
+        Dispose();
+        return Task.CompletedTask;
     }
 
     private static void InitializeLogging()
@@ -282,6 +294,8 @@ public sealed class AppLifetimeService : IDisposable
 
     public void Dispose()
     {
+        if (_disposed) return;
+        _disposed = true;
         _captureSession.CaptureCompleted -= OnCaptureCompleted;
         _captureSession.CaptureCancelled -= OnCaptureCancelled;
         _hotkey.Dispose(); _ocr.Dispose(); _tray.Dispose(); _guard.Dispose();
