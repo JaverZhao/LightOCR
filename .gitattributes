@@ -1,0 +1,22 @@
+# Auto-detect text files
+* text=auto
+
+# Source code
+*.cs text diff=csharp
+*.xaml text
+*.csproj text
+*.sln text
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.md text
+*.json text
+*.xml text
+*.yml text
+*.yaml text
+
+# Binaries
+*.dll binary
+*.exe binary
+*.pdb binary
+*.onnx binary
+*.ico binary

@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 2,
+  "primaryBackend": "onnxruntime",
+  "backendReason": "Paddle Inference 3.0.0 pre-built Windows PIR format incompatible with PP-OCRv6",
+  "onnxRuntime": {
+    "version": "1.21.0",
+    "url": "https://github.com/microsoft/onnxruntime/releases/download/v1.21.0/onnxruntime-win-x64-1.21.0.zip",
+    "sha256": "",
+    "notes": "NuGet also available: Microsoft.ML.OnnxRuntime 1.21.0"
+  },
+  "opencv": {
+    "version": "4.7.0",
+    "url": "https://github.com/opencv/opencv/releases/download/4.7.0/opencv-4.7.0-windows.exe",
+    "notes": "Only needed for C++ pre/post processing; C# may use SkiaSharp/ImageSharp instead"
+  },
+  "paddleInference": {
+    "version": "3.0.0",
+    "url": "https://paddle-inference-lib.bj.bcebos.com/3.0.0/cxx_c/Windows/CPU/x86-64_avx-mkl-vs2019/paddle_inference.zip",
+    "deprecated": true,
+    "replacedBy": "onnxruntime"
+  }
+}

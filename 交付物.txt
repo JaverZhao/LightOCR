@@ -1,0 +1,24 @@
+交付物
+publish/
+├─ LightOCR-1.0.0-win-x64/
+│  ├─ LightOCR.exe               ← 主程序 (0.21 MB)
+│  ├─ LightOCR.dll               ← C# WPF 程序集
+│  ├─ LightOCR.Native.dll        ← 原生 OCR 引擎 (0.09 MB)
+│  ├─ onnxruntime.dll            ← ONNX Runtime (12.4 MB)
+│  ├─ *.dll (NET runtime)        ← 自包含 .NET 运行时
+│  ├─ models/onnx/
+│  │  ├─ det_inference.onnx      ← 检测模型 (9.4 MB)
+│  │  ├─ rec_inference.onnx      ← 识别模型 (20.2 MB)
+│  │  └─ ppocrv6_dict.txt        ← 字符字典
+│  ├─ portable.flag              ← 便携模式标记
+│  └─ licenses/                  ← 第三方许可证
+│
+├─ LightOCR-1.0.0-win-x64-portable.zip  (95.81 MB)
+└─ LightOCR.iss                  ← Inno Setup 安装脚本
+构建脚本
+eng/package.ps1          ← 一键打包：publish → 复制原生 DLL/模型 → ZIP
+eng/build-native.ps1     ← 编译 C++ (Debug/Release)
+eng/build-app.ps1        ← 编译 C# (Debug/Release)
+eng/fetch-models.ps1     ← 下载模型
+eng/fetch-dependencies.ps1 ← 下载依赖
+installer/LightOCR.iss  ← Inno Setup 安装包脚本

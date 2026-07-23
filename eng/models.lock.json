@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 2,
+  "primaryFormat": "ONNX",
+  "detModel": {
+    "name": "PP-OCRv6_small_det",
+    "format": "ONNX",
+    "params": 2480000,
+    "files": {
+      "onnx": {
+        "url": "https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/tmp/PP-OCRv6_small_det_onnx.tar",
+        "sha256": "",
+        "size": "9.43 MB"
+      }
+    }
+  },
+  "recModel": {
+    "name": "PP-OCRv6_small_rec",
+    "format": "ONNX",
+    "params": 5290000,
+    "files": {
+      "onnx": {
+        "url": "https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/tmp/PP-OCRv6_small_rec_0515_onnx.tar",
+        "sha256": "",
+        "size": "20.33 MB"
+      }
+    }
+  },
+  "paddleInferenceFormat": {
+    "detModel": {
+      "name": "PP-OCRv6_small_det",
+      "files": {
+        "pdiparams": "https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det/resolve/main/inference.pdiparams",
+        "json": "https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det/resolve/main/inference.json",
+        "yml": "https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det/resolve/main/inference.yml"
+      }
+    },
+    "recModel": {
+      "name": "PP-OCRv6_small_rec",
+      "files": {
+        "pdiparams": "https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec/resolve/main/inference.pdiparams",
+        "json": "https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec/resolve/main/inference.json",
+        "yml": "https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec/resolve/main/inference.yml"
+      }
+    }
+  }
+}

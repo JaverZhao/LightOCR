@@ -1,0 +1,43 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{BF8787F0-F724-4C0B-BB7C-8A942FD9C084}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LightOCR.App", "src\LightOCR.App\LightOCR.App.csproj", "{7F4D1DBF-75C1-4084-B62D-1AB175F3C52B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{CF12C67C-EE73-4947-ADA0-53983230CAC2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LightOCR.App.Tests", "tests\LightOCR.App.Tests\LightOCR.App.Tests.csproj", "{1BCC1248-8F3A-4B3D-8A13-B7676C22484B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LightOCR.IntegrationTests", "tests\LightOCR.IntegrationTests\LightOCR.IntegrationTests.csproj", "{5AA0591E-F0AD-4C5C-8C4E-358D66C95CAE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7F4D1DBF-75C1-4084-B62D-1AB175F3C52B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7F4D1DBF-75C1-4084-B62D-1AB175F3C52B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7F4D1DBF-75C1-4084-B62D-1AB175F3C52B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7F4D1DBF-75C1-4084-B62D-1AB175F3C52B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1BCC1248-8F3A-4B3D-8A13-B7676C22484B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1BCC1248-8F3A-4B3D-8A13-B7676C22484B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1BCC1248-8F3A-4B3D-8A13-B7676C22484B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1BCC1248-8F3A-4B3D-8A13-B7676C22484B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5AA0591E-F0AD-4C5C-8C4E-358D66C95CAE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5AA0591E-F0AD-4C5C-8C4E-358D66C95CAE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5AA0591E-F0AD-4C5C-8C4E-358D66C95CAE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5AA0591E-F0AD-4C5C-8C4E-358D66C95CAE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{7F4D1DBF-75C1-4084-B62D-1AB175F3C52B} = {BF8787F0-F724-4C0B-BB7C-8A942FD9C084}
+		{1BCC1248-8F3A-4B3D-8A13-B7676C22484B} = {CF12C67C-EE73-4947-ADA0-53983230CAC2}
+		{5AA0591E-F0AD-4C5C-8C4E-358D66C95CAE} = {CF12C67C-EE73-4947-ADA0-53983230CAC2}
+	EndGlobalSection
+EndGlobal

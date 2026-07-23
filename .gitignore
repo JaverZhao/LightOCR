@@ -1,0 +1,51 @@
+# Build outputs
+**/bin/
+**/obj/
+*.user
+*.suo
+*.sln.docstates
+*.userprefs
+
+# Native build
+src/LightOCR.Native/build/
+src/LightOCR.Native/x64/
+src/LightOCR.Native/tests/build/
+
+# Publish / package output
+publish/
+*.zip
+*.7z
+
+# Runtime dependencies (large, download separately)
+runtime/
+
+# PaddleOCR source (vendored, not part of this repo)
+eng/PaddleOCR_src/
+
+# Model files (PaddlePaddle format, not needed for ONNX Runtime)
+*.pdiparams
+*.pdimodel
+*.pdopt
+
+# Large alternate model variant
+models/onnx_medium/
+
+# Test & debug images
+**/*.png
+!Assets/**/*.png
+
+# Test outputs
+**/TestResults/
+
+# VS Code
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS junk
+Thumbs.db
+.DS_Store
+
+# Logs
+*.log
