@@ -97,16 +97,26 @@ int TextRecognizer::Recognize(const uint8_t* bgr_pixels, int width, int height,
     // Resize to (resized_w, imgH)
     std::vector<uint8_t> resized(resized_w * imgH * 3);
     for (int y = 0; y < imgH; ++y) {
-        float src_y = static_cast<float>(y) * height / imgH;
-        int src_y0 = std::min(static_cast<int>(src_y), height - 1);
+        const float src_y = (y + 0.5f) * height / imgH - 0.5f;
+        const int y0 = std::clamp(static_cast<int>(std::floor(src_y)), 0, height - 1);
+        const int y1 = std::min(y0 + 1, height - 1);
+        const float fy = std::clamp(src_y - std::floor(src_y), 0.0f, 1.0f);
         for (int x = 0; x < resized_w; ++x) {
-            float src_x = static_cast<float>(x) * width / resized_w;
-            int src_x0 = std::min(static_cast<int>(src_x), width - 1);
-            int src_idx = (src_y0 * width + src_x0) * 3;
+            const float src_x = (x + 0.5f) * width / resized_w - 0.5f;
+            const int x0 = std::clamp(static_cast<int>(std::floor(src_x)), 0, width - 1);
+            const int x1 = std::min(x0 + 1, width - 1);
+            const float fx = std::clamp(src_x - std::floor(src_x), 0.0f, 1.0f);
             int dst_idx = (y * resized_w + x) * 3;
-            resized[dst_idx] = bgr_pixels[src_idx];
-            resized[dst_idx + 1] = bgr_pixels[src_idx + 1];
-            resized[dst_idx + 2] = bgr_pixels[src_idx + 2];
+            for (int c = 0; c < 3; ++c) {
+                const float top =
+                    bgr_pixels[(y0 * width + x0) * 3 + c] * (1.0f - fx) +
+                    bgr_pixels[(y0 * width + x1) * 3 + c] * fx;
+                const float bottom =
+                    bgr_pixels[(y1 * width + x0) * 3 + c] * (1.0f - fx) +
+                    bgr_pixels[(y1 * width + x1) * 3 + c] * fx;
+                resized[dst_idx + c] = static_cast<uint8_t>(
+                    std::clamp(top * (1.0f - fy) + bottom * fy, 0.0f, 255.0f));
+            }
         }
     }
 

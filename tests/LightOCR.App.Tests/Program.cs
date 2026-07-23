@@ -62,7 +62,7 @@ internal static class Program
     private static void VerifyCoordinatorReload()
     {
         var modelDir = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory, "..", "..", "..", "..", "..", "models", "onnx"));
+            AppContext.BaseDirectory, "..", "..", "..", "..", "..", "models", "onnx_medium"));
         Assert(Directory.Exists(modelDir), "OCR model directory should exist");
 
         using var coordinator = new OcrCoordinator();

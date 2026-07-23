@@ -5,7 +5,7 @@
 > 编写日期：2026-07-22  
 > 工作项目名：`LightOCR`（可在正式立项时统一替换）  
 > 目标平台：Windows 10 22H2 / Windows 11，x64  
-> OCR 模型：`PP-OCRv6_small_det` + `PP-OCRv6_small_rec`  
+> OCR 模型：`PP-OCRv6_medium_det` + `PP-OCRv6_medium_rec`
 > 默认推理：CPU、本地离线推理  
 > 主技术栈：C# + WPF + C++20 + Paddle Inference + OpenCV
 
@@ -226,7 +226,7 @@ System.Windows.Forms.NotifyIcon
 编译器：MSVC x64
 推理：Paddle Inference CPU
 图像处理：OpenCV 4.x
-模型：PP-OCRv6_small_det + PP-OCRv6_small_rec
+模型：PP-OCRv6_medium_det + PP-OCRv6_medium_rec
 接口：C ABI
 上层调用：C# P/Invoke
 ```
@@ -872,7 +872,7 @@ BGRA 输入
   → 框排序
   → 透视裁剪
   → 识别预处理
-  → PP-OCRv6_small_rec 推理
+  → PP-OCRv6_medium_rec 推理
   → CTC/对应解码
   → 置信度过滤
   → 阅读顺序整理
@@ -2000,7 +2000,7 @@ NotifyIcon
 
 OCR：
 PP-OCRv6_small_det
-PP-OCRv6_small_rec
+PP-OCRv6_medium_rec
 C++20
 Paddle Inference CPU
 OpenCV 4.x

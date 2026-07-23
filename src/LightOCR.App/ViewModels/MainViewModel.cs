@@ -129,10 +129,10 @@ public partial class MainViewModel : ObservableObject
     private async Task ReloadModel()
     {
         ModelState = "重新加载中...";
-        var modelDir = Path.Combine(AppContext.BaseDirectory, "models", "onnx");
+        var modelDir = Path.Combine(AppContext.BaseDirectory, "models", "onnx_medium");
         if (!Directory.Exists(modelDir))
             modelDir = Path.GetFullPath(Path.Combine(
-                AppContext.BaseDirectory, @"..\..\..\..\..\..\models\onnx"));
+                AppContext.BaseDirectory, @"..\..\..\..\..\..\models\onnx_medium"));
         var settings = _settingsService.Load<Settings>();
         await _ocrCoordinator.InitializeAsync(modelDir, settings.Ocr);
         ModelState = "模型已就绪";

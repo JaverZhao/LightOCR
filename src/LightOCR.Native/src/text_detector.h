@@ -10,7 +10,10 @@ struct TextDetector {
     TextDetector() = default;
     ~TextDetector() = default;
 
-    int Initialize(const std::string& model_path, int cpu_threads, std::string* out_error);
+    int Initialize(const std::string& model_path, int cpu_threads,
+                   int limit_side_len, float det_thresh, float box_thresh,
+                   float unclip_ratio, int max_candidates,
+                   std::string* out_error);
     int Detect(const std::uint8_t* bgr_pixels, int width, int height,
                std::vector<std::vector<std::pair<int, int>>>* out_boxes,
                std::string* out_error);
@@ -30,8 +33,9 @@ private:
     std::vector<float> std_ = {0.229f, 0.224f, 0.225f};
 
     std::vector<uint8_t> Preprocess(const uint8_t* bgr, int w, int h,
-                                     int* out_w, int* out_h, float* scale);
+                                    int* out_w, int* out_h,
+                                    float* scale_x, float* scale_y);
     std::vector<std::vector<std::pair<int, int>>> Postprocess(
         const float* prob_map, int map_h, int map_w,
-        int orig_w, int orig_h, float scale);
+        int orig_w, int orig_h, float scale_x, float scale_y);
 };

@@ -19,7 +19,11 @@ int OcrEngine::Initialize(const std::string& config_json) {
     auto base_dir = config_.model_dir;
     auto det_model_path = base_dir + "/" + config_.det_model_onnx;
     detector_ = std::make_unique<TextDetector>();
-    rc = detector_->Initialize(det_model_path, config_.cpu_threads, &last_error_);
+    rc = detector_->Initialize(
+        det_model_path, config_.cpu_threads,
+        config_.det_limit_side_len, config_.det_threshold,
+        config_.det_box_threshold, config_.det_unclip_ratio,
+        config_.det_max_candidates, &last_error_);
     if (rc != 0) return rc;
 
     auto rec_model_path = base_dir + "/" + config_.rec_model_onnx;
@@ -81,9 +85,10 @@ std::string OcrEngine::RunPipeline(const uint8_t* bgr, int w, int h) {
         int box_h = max_y - min_y;
         if (box_w < 3 || box_h < 3) continue;
 
-        // Padding for recognition
-        int pad_y = std::max(box_h / 2, 4);
-        int pad_x = std::max(box_w / 20, 4);
+        // DB unclip already provides most of the required context. Keep only a
+        // small safety border instead of adding half a line of vertical padding.
+        int pad_y = 2;
+        int pad_x = 2;
         min_x = std::max(0, min_x - pad_x);
         max_x = std::min(w, max_x + pad_x);
         min_y = std::max(0, min_y - pad_y);

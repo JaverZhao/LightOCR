@@ -1,6 +1,6 @@
 # LightOCR
 
-轻量级本地 OCR 工具，基于 PP-OCRv6 + ONNX Runtime，所有识别在本地 CPU 完成，图片不会离开你的电脑。
+轻量级本地 OCR 工具，基于官方 PP-OCRv6 medium 检测与识别模型和 ONNX Runtime，所有识别在本地 CPU 完成，图片不会离开你的电脑。
 
 ## 特性
 
@@ -32,7 +32,7 @@
 
 ## 技术栈
 
-- PP-OCRv6 文字识别模型
+- PP-OCRv6_medium_det + PP-OCRv6_medium_rec
 - ONNX Runtime CPU 推理
 - .NET 8 / WPF
 - CommunityToolkit.Mvvm

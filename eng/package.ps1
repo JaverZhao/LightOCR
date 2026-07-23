@@ -5,6 +5,17 @@ $PublishDir = Join-Path $RepoRoot "publish"
 $VersionedDir = Join-Path $PublishDir "LightOCR-$Version-win-x64"
 Write-Host "[package] LightOCR v$Version packaging"
 
+if (Test-Path -LiteralPath $VersionedDir) {
+    $resolvedPublish = [System.IO.Path]::GetFullPath($PublishDir)
+    $resolvedVersioned = [System.IO.Path]::GetFullPath($VersionedDir)
+    if (-not $resolvedVersioned.StartsWith(
+        $resolvedPublish + [System.IO.Path]::DirectorySeparatorChar,
+        [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing to clean package directory outside publish root: $resolvedVersioned"
+    }
+    Remove-Item -LiteralPath $resolvedVersioned -Recurse -Force
+}
+
 Write-Host "[package] Publishing .NET app..."
 dotnet publish "$RepoRoot\src\LightOCR.App\LightOCR.App.csproj" `
     --configuration Release --runtime win-x64 --self-contained true `
@@ -16,14 +27,14 @@ Copy-Item "$RepoRoot\src\LightOCR.Native\build\Release\LightOCR.Native.dll" $Ver
 Copy-Item "$RepoRoot\runtime\onnxruntime\onnxruntime-win-x64-1.21.0\lib\onnxruntime.dll" $VersionedDir -Force -ErrorAction SilentlyContinue
 
 Write-Host "[package] Copying models..."
-$mt = Join-Path $VersionedDir "models\onnx"
+$mt = Join-Path $VersionedDir "models\onnx_medium"
 New-Item -ItemType Directory -Path $mt -Force | Out-Null
-if (Test-Path "$RepoRoot\models\onnx\det\inference.onnx") {
-    Copy-Item "$RepoRoot\models\onnx\det\inference.onnx" (Join-Path $mt "det_inference.onnx") -Force }
-if (Test-Path "$RepoRoot\models\onnx\rec\inference.onnx") {
-    Copy-Item "$RepoRoot\models\onnx\rec\inference.onnx" (Join-Path $mt "rec_inference.onnx") -Force }
-if (Test-Path "$RepoRoot\models\onnx\ppocrv6_dict.txt") {
-    Copy-Item "$RepoRoot\models\onnx\ppocrv6_dict.txt" (Join-Path $mt "ppocrv6_dict.txt") -Force }
+if (Test-Path "$RepoRoot\models\onnx_medium\det\inference.onnx") {
+    Copy-Item "$RepoRoot\models\onnx_medium\det\inference.onnx" (Join-Path $mt "det_inference.onnx") -Force }
+if (Test-Path "$RepoRoot\models\onnx_medium\rec\inference.onnx") {
+    Copy-Item "$RepoRoot\models\onnx_medium\rec\inference.onnx" (Join-Path $mt "rec_inference.onnx") -Force }
+if (Test-Path "$RepoRoot\models\onnx_medium\ppocrv6_dict.txt") {
+    Copy-Item "$RepoRoot\models\onnx_medium\ppocrv6_dict.txt" (Join-Path $mt "ppocrv6_dict.txt") -Force }
 
 Set-Content -Path (Join-Path $VersionedDir "portable.flag") -Value "LightOCR Portable Mode"
 

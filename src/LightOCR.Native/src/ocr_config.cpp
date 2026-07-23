@@ -37,6 +37,8 @@ int ParseOcrConfig(const std::string& json, OcrConfig* out_config, std::string* 
     out_config->det_limit_side_len = find_int("detLimitSideLen", out_config->det_limit_side_len);
     out_config->det_box_threshold = find_float("detBoxThreshold", out_config->det_box_threshold);
     out_config->det_unclip_ratio = find_float("detUnclipRatio", out_config->det_unclip_ratio);
+    out_config->det_threshold = find_float("detThreshold", out_config->det_threshold);
+    out_config->det_max_candidates = find_int("detMaxCandidates", out_config->det_max_candidates);
 
     return 0;
 }

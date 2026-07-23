@@ -44,13 +44,14 @@ public partial class DiagnosticsViewModel : ObservableObject
         Screens = $"显示器：{screenCount} 个";
 
         var baseDir = AppContext.BaseDirectory;
-        var modelDir = Path.Combine(baseDir, "models", "onnx");
+        var modelDir = Path.Combine(baseDir, "models", "onnx_medium");
         if (!Directory.Exists(modelDir))
-            modelDir = Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\..\..\models\onnx"));
+            modelDir = Path.GetFullPath(Path.Combine(
+                baseDir, @"..\..\..\..\..\models\onnx_medium"));
 
         ModelDir = $"模型目录：{modelDir}";
-        DetModel = $"检测模型：PP-OCRv6_small_det (ONNX)";
-        RecModel = $"识别模型：PP-OCRv6_small_rec (ONNX)";
+        DetModel = $"检测模型：PP-OCRv6_medium_det (ONNX)";
+        RecModel = $"识别模型：PP-OCRv6_medium_rec (ONNX)";
 
         OnnxRuntimeVersion = "推理引擎：ONNX Runtime 1.21.0";
 

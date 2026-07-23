@@ -59,7 +59,12 @@ public sealed class OcrCoordinator : IDisposable
                 dictPath = "ppocrv6_dict.txt",
                 cpuThreads = Math.Clamp(settings?.CpuThreads ?? 4, 1, 16),
                 confidenceThreshold = Math.Clamp(
-                    settings?.ConfidenceThreshold ?? 0.55f, 0.0f, 1.0f)
+                    settings?.ConfidenceThreshold ?? 0.55f, 0.0f, 1.0f),
+                detLimitSideLen = 960,
+                detThreshold = 0.2f,
+                detBoxThreshold = 0.45f,
+                detUnclipRatio = 1.4f,
+                detMaxCandidates = 3000
             };
 
             var json = JsonSerializer.Serialize(config);

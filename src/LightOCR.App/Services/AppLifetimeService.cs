@@ -120,16 +120,16 @@ public sealed class AppLifetimeService : IDisposable
     private static string? ResolveModelDir()
     {
         // Priority 1: next to the exe (packaged build)
-        var d1 = Path.Combine(AppContext.BaseDirectory, "models", "onnx");
+        var d1 = Path.Combine(AppContext.BaseDirectory, "models", "onnx_medium");
         if (Directory.Exists(d1)) return d1;
 
         // Priority 2: dev directory relative to output (bin/Debug/net8.0-windows/win-x64/ -> repo root)
         var d2 = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
-            @"..\..\..\..\..\..\models\onnx"));
+            @"..\..\..\..\..\..\models\onnx_medium"));
         if (Directory.Exists(d2)) return d2;
 
         // Priority 3: flat model names (packaged naming)
-        var d3 = Path.Combine(AppContext.BaseDirectory, "models", "onnx");
+        var d3 = Path.Combine(AppContext.BaseDirectory, "models", "onnx_medium");
         if (File.Exists(Path.Combine(d3, "det_inference.onnx"))) return d3;
 
         return null;

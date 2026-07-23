@@ -29,10 +29,15 @@ class Program
     {
         Console.WriteLine($"API v{lightocr_get_api_version()}");
 var cfg = new { modelDir = Path.GetFullPath(
-    Path.Combine(AppContext.BaseDirectory, @"..\..\..\..\..\models\onnx")),
+    Path.Combine(AppContext.BaseDirectory, @"..\..\..\..\..\models\onnx_medium")),
     detModelOnnx = "det/inference.onnx",
     recModelOnnx = "rec/inference.onnx",
-    dictPath = "ppocrv6_dict.txt" };
+    dictPath = "ppocrv6_dict.txt",
+    detLimitSideLen = 960,
+    detThreshold = 0.2f,
+    detBoxThreshold = 0.45f,
+    detUnclipRatio = 1.4f,
+    detMaxCandidates = 3000 };
 
         IntPtr cp = Marshal.StringToCoTaskMemUTF8(
             System.Text.Json.JsonSerializer.Serialize(cfg));
