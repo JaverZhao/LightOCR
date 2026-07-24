@@ -1,6 +1,7 @@
 using LightOCR.App.Services;
 using LightOCR.App.ViewModels;
 using System.Windows;
+using System.Windows.Input;
 using WpfKeyEventArgs = System.Windows.Input.KeyEventArgs;
 using WpfMouseButtonEventArgs = System.Windows.Input.MouseButtonEventArgs;
 
@@ -31,20 +32,17 @@ public partial class SettingsWindow : Window
     {
         e.Handled = true;
         var modifiers = new List<string>();
-        if (System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.LeftAlt) || System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.RightAlt))
+        if (Keyboard.IsKeyDown(Key.LeftAlt) || Keyboard.IsKeyDown(Key.RightAlt))
             modifiers.Add("Alt");
-        if (System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.LeftCtrl) || System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.RightCtrl))
+        if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
             modifiers.Add("Ctrl");
-        if (System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.LeftShift) || System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.RightShift))
+        if (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift))
             modifiers.Add("Shift");
-        if (System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.LWin) || System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.RWin))
+        if (Keyboard.IsKeyDown(Key.LWin) || Keyboard.IsKeyDown(Key.RWin))
             modifiers.Add("Win");
 
-        var key = e.Key;
-        if (key == System.Windows.Input.Key.LeftAlt || key == System.Windows.Input.Key.RightAlt ||
-            key == System.Windows.Input.Key.LeftCtrl || key == System.Windows.Input.Key.RightCtrl ||
-            key == System.Windows.Input.Key.LeftShift || key == System.Windows.Input.Key.RightShift ||
-            key == System.Windows.Input.Key.LWin || key == System.Windows.Input.Key.RWin)
+        var key = NormalizeCapturedKey(e.Key, e.SystemKey, e.ImeProcessedKey, e.DeadCharProcessedKey);
+        if (IsModifierKey(key))
             return;
 
         if (modifiers.Count > 0)
@@ -52,5 +50,28 @@ public partial class SettingsWindow : Window
             _vm.SetHotkey(modifiers.ToArray(), key.ToString());
             PreviewKeyDown -= OnHotkeyPreviewKeyDown;
         }
+    }
+
+    internal static Key NormalizeCapturedKey(
+        Key key,
+        Key systemKey,
+        Key imeProcessedKey,
+        Key deadCharProcessedKey)
+    {
+        if (key == Key.System)
+            return systemKey;
+        if (key == Key.ImeProcessed)
+            return imeProcessedKey;
+        if (key == Key.DeadCharProcessed)
+            return deadCharProcessedKey;
+        return key;
+    }
+
+    private static bool IsModifierKey(Key key)
+    {
+        return key is Key.LeftAlt or Key.RightAlt or
+            Key.LeftCtrl or Key.RightCtrl or
+            Key.LeftShift or Key.RightShift or
+            Key.LWin or Key.RWin;
     }
 }

@@ -76,25 +76,9 @@ public partial class SettingsViewModel : ObservableObject
         var mods = string.Join(" + ", modifiers);
         HotkeyText = $"{mods} + {key}";
 
-        // Validate: try register the new hotkey
-        var tempService = new HotkeyService();
-        var win = new Window { Width = 0, Height = 0, WindowStyle = WindowStyle.None,
-            ShowInTaskbar = false };
-        try
-        {
-            win.Show();
-            win.Hide();
-            tempService.Initialize(win);
-
-            HotkeyStatus = tempService.Register(string.Join("+", modifiers), key)
-                ? "快捷键可用"
-                : "快捷键冲突，请选择其他组合";
-        }
-        finally
-        {
-            tempService.Dispose();
-            win.Close();
-        }
+        HotkeyStatus = _hotkey.CanRegister(string.Join("+", modifiers), key)
+            ? "快捷键可用"
+            : "快捷键冲突，请选择其他组合";
     }
 
     [RelayCommand]

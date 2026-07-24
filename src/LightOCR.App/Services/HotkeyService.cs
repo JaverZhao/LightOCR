@@ -3,6 +3,7 @@ using Serilog;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Input;
 
 namespace LightOCR.App.Services;
 
@@ -41,34 +42,18 @@ public sealed class HotkeyService : IDisposable
         var previousKey = _registeredKey;
         Unregister();
 
-        uint mod = 0;
-        foreach (var m in modifiers.Split('+', StringSplitOptions.TrimEntries))
+        if (!TryParseHotkey(modifiers, key, out var mod, out var vk))
         {
-            mod |= (uint)(m.ToLower() switch
-            {
-                "alt" => User32.MOD_ALT,
-                "ctrl" or "control" => User32.MOD_CONTROL,
-                "shift" => User32.MOD_SHIFT,
-                "win" => User32.MOD_WIN,
-                _ => 0
-            });
+            Log.Error("Invalid hotkey: {Mod}+{Key}", modifiers, key);
+            RestorePreviousHotkey(hadPrevious, previousModifiers, previousKey);
+            return false;
         }
-
-        uint vk = (uint)System.Windows.Input.KeyInterop.VirtualKeyFromKey(
-            (System.Windows.Input.Key)Enum.Parse(typeof(System.Windows.Input.Key), key, true));
 
         if (!User32.RegisterHotKey(_hwnd, HotkeyId, mod | User32.MOD_NOREPEAT, vk))
         {
             int err = Marshal.GetLastWin32Error();
             Log.Error("RegisterHotKey failed, error={Err}, mod={Mod}, key={Key}", err, mod, key);
-            if (hadPrevious &&
-                User32.RegisterHotKey(_hwnd, HotkeyId, previousModifiers, previousKey))
-            {
-                _registered = true;
-                _registeredModifiers = previousModifiers;
-                _registeredKey = previousKey;
-                Log.Warning("Restored previous hotkey after registration failure");
-            }
+            RestorePreviousHotkey(hadPrevious, previousModifiers, previousKey);
             return false;
         }
 
@@ -77,6 +62,39 @@ public sealed class HotkeyService : IDisposable
         _registeredKey = vk;
         Log.Information("Hotkey registered: {Mod}+{Key}", modifiers, key);
         return true;
+    }
+
+    public bool CanRegister(string modifiers, string key)
+    {
+        var hadPrevious = _registered;
+        var previousModifiers = _registeredModifiers;
+        var previousKey = _registeredKey;
+        Unregister();
+
+        var registeredCandidate = false;
+        try
+        {
+            if (!TryParseHotkey(modifiers, key, out var mod, out var vk))
+                return false;
+
+            registeredCandidate = User32.RegisterHotKey(
+                _hwnd, HotkeyId, mod | User32.MOD_NOREPEAT, vk);
+            if (!registeredCandidate)
+            {
+                int err = Marshal.GetLastWin32Error();
+                Log.Warning("Hotkey availability check failed, error={Err}, mod={Mod}, key={Key}",
+                    err, mod, key);
+            }
+
+            return registeredCandidate;
+        }
+        finally
+        {
+            if (registeredCandidate)
+                User32.UnregisterHotKey(_hwnd, HotkeyId);
+
+            RestorePreviousHotkey(hadPrevious, previousModifiers, previousKey);
+        }
     }
 
     public void Unregister()
@@ -96,6 +114,64 @@ public sealed class HotkeyService : IDisposable
             handled = true;
         }
         return IntPtr.Zero;
+    }
+
+    private static bool TryParseHotkey(string modifiers, string key, out uint mod, out uint vk)
+    {
+        mod = 0;
+        vk = 0;
+
+        foreach (var m in modifiers.Split(
+            '+', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        {
+            var parsed = m.ToLowerInvariant() switch
+            {
+                "alt" => User32.MOD_ALT,
+                "ctrl" or "control" => User32.MOD_CONTROL,
+                "shift" => User32.MOD_SHIFT,
+                "win" => User32.MOD_WIN,
+                _ => 0
+            };
+            if (parsed == 0)
+                return false;
+
+            mod |= (uint)parsed;
+        }
+
+        if (!Enum.TryParse<Key>(key, true, out var parsedKey) || !IsUsableMainKey(parsedKey))
+            return false;
+
+        vk = (uint)KeyInterop.VirtualKeyFromKey(parsedKey);
+        return vk != 0;
+    }
+
+    private static bool IsUsableMainKey(Key key)
+    {
+        return key is not (Key.None or
+            Key.System or Key.ImeProcessed or Key.DeadCharProcessed or
+            Key.LeftAlt or Key.RightAlt or
+            Key.LeftCtrl or Key.RightCtrl or
+            Key.LeftShift or Key.RightShift or
+            Key.LWin or Key.RWin);
+    }
+
+    private void RestorePreviousHotkey(bool hadPrevious, uint previousModifiers, uint previousKey)
+    {
+        if (!hadPrevious)
+            return;
+
+        if (User32.RegisterHotKey(_hwnd, HotkeyId, previousModifiers, previousKey))
+        {
+            _registered = true;
+            _registeredModifiers = previousModifiers;
+            _registeredKey = previousKey;
+            Log.Warning("Restored previous hotkey");
+        }
+        else
+        {
+            int err = Marshal.GetLastWin32Error();
+            Log.Error("Failed to restore previous hotkey, error={Err}", err);
+        }
     }
 
     public void Dispose()
